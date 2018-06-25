@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	log "github.com/sirupsen/logrus"
+	"net"
 )
 
 func init() {
@@ -25,8 +26,8 @@ func init() {
 }
 
 var (
-	logLevel      log.Level = log.InfoLevel
-	bindAddr                = flag.String("bind-addr", ":9141", "bind address for the metrics server")
+	logLevel      log.Level = log.ErrorLevel
+	bindAddr                = flag.String("bind-addr", "/dev/shm/zookeeper.sock", "bind address for the metrics server")
 	metricsPath             = flag.String("metrics-path", "/metrics", "path to metrics endpoint")
 	zookeeperAddr           = flag.String("zookeeper", "localhost:2181", "host:port for zookeeper socket")
 	rawLevel                = flag.String("log-level", "info", "log level")
@@ -35,13 +36,10 @@ var (
 )
 
 func main() {
-	log.Info(version.Print("zookeeper_exporter"))
 	log.SetLevel(logLevel)
 	if *showVersion {
 		return
 	}
-
-	log.Info("Starting zookeeper_exporter")
 
 	go serveMetrics()
 
@@ -52,10 +50,19 @@ func main() {
 }
 
 func serveMetrics() {
-	log.Infof("Starting metric http endpoint on %s", *bindAddr)
-	http.Handle(*metricsPath, prometheus.Handler())
-	http.HandleFunc("/", rootHandler)
-	log.Fatal(http.ListenAndServe(*bindAddr, nil))
+	mux := http.NewServeMux()
+	mux.Handle(*metricsPath, prometheus.Handler())
+	mux.HandleFunc("/", rootHandler)
+	server := http.Server{
+		Handler: mux, // http.DefaultServeMux,
+	}
+	os.Remove(*bindAddr)
+
+	listener, err := net.Listen("unix", *bindAddr)
+	if err != nil {
+		panic(err)
+	}
+	server.Serve(listener)
 }
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
