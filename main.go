@@ -27,7 +27,7 @@ func init() {
 
 var (
 	logLevel      log.Level = log.ErrorLevel
-	bindAddr                = flag.String("bind-addr", "/dev/shm/zookeeper.sock", "bind address for the metrics server")
+	bindAddr                = flag.String("bind-addr", "/dev/shm/zookeeper_exporter.sock", "bind address for the metrics server")
 	metricsPath             = flag.String("metrics-path", "/metrics", "path to metrics endpoint")
 	zookeeperAddr           = flag.String("zookeeper", "localhost:2181", "host:port for zookeeper socket")
 	rawLevel                = flag.String("log-level", "info", "log level")
